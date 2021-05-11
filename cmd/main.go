@@ -98,7 +98,7 @@ func main() {
 		for d := range msgs {
 			zlog.Info().Msg("adaptation request consumer  received message from queue ")
 
-			err := processMessage(d)
+			err := ProcessMessage(d)
 			if err != nil {
 				zlog.Error().Err(err).Msg("error adaptationRequest consumer Failed to process message")
 			}
@@ -109,7 +109,7 @@ func main() {
 		for d := range outMsgs {
 			zlog.Info().Msg(" processingOutcome consumer received message from queue ")
 
-			err := outcomeProcessMessage(d)
+			err := OutcomeProcessMessage(d)
 			if err != nil {
 				zlog.Error().Err(err).Msg("error processingOutcome consumer Failed to process message")
 			}
@@ -121,7 +121,7 @@ func main() {
 
 }
 
-func processMessage(d amqp.Delivery) error {
+func ProcessMessage(d amqp.Delivery) error {
 
 	if d.Headers["file-id"] == nil ||
 		d.Headers["source-file-location"] == nil ||
@@ -163,7 +163,7 @@ func processMessage(d amqp.Delivery) error {
 	return nil
 }
 
-func outcomeProcessMessage(d amqp.Delivery) error {
+func OutcomeProcessMessage(d amqp.Delivery) error {
 
 	if d.Headers["clean-presigned-url"] == nil ||
 		d.Headers["rebuilt-file-location"] == nil ||
