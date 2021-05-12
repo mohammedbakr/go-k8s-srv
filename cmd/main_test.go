@@ -60,8 +60,6 @@ func (s *RabbitmqTestSuite) TestprocessmsgMessage() {
         if err := pool.Purge(resource); err != nil {
             log.Fatalf("Could not purge resource: %s", err)
         }
-        // Initiate a publisher on processing exchange
-        os.Exit(0)
     })
 }
 func TestRabbitmqTestSuite(t *testing.T) {
