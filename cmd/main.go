@@ -31,7 +31,6 @@ var (
 	AdaptationOutcomeRoutingKey = "adaptation-exchange"
 	AdaptationOutcomeQueueName  = "amq.rabbitmq.reply-to"
 
-	inputMount                     = os.Getenv("INPUT_MOUNT")
 	adaptationRequestQueueHostname = os.Getenv("ADAPTATION_REQUEST_QUEUE_HOSTNAME")
 	adaptationRequestQueuePort     = os.Getenv("ADAPTATION_REQUEST_QUEUE_PORT")
 	messagebrokeruser              = os.Getenv("MESSAGE_BROKER_USER")
@@ -126,7 +125,7 @@ func ProcessMessage(d amqp.Delivery) error {
 	if d.Headers["file-id"] == nil ||
 		d.Headers["source-file-location"] == nil ||
 		d.Headers["rebuilt-file-location"] == nil {
-		return fmt.Errorf("Headers value is nil")
+		return fmt.Errorf("headers value is nil")
 	}
 
 	publisher, err := rabbitmq.NewQueuePublisher(connection, ProcessingRequestExchange)
@@ -168,7 +167,7 @@ func OutcomeProcessMessage(d amqp.Delivery) error {
 	if d.Headers["clean-presigned-url"] == nil ||
 		d.Headers["rebuilt-file-location"] == nil ||
 		d.Headers["reply-to"] == nil {
-		return fmt.Errorf("Headers value is nil")
+		return fmt.Errorf("headers value is nil")
 	}
 
 	fileID := d.Headers["file-id"].(string)
