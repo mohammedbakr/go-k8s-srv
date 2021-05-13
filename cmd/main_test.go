@@ -8,14 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NeowayLabs/wabbit"
-	"github.com/k8-proxy/k8-go-comm/pkg/minio"
-	"github.com/k8-proxy/k8-go-comm/pkg/rabbitmq"
 	min7 "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
-	zlog "github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/suite"
 )
@@ -24,7 +20,7 @@ type RabbitmqTestSuite struct {
 	suite.Suite
 }
 
-var body = "body test"
+// var body = "body test"
 
 func (s *RabbitmqTestSuite) TestprocessmsgMessage() {
 	s.T().Run("K8 srv massge", func(t *testing.T) {
@@ -136,78 +132,78 @@ func TestProcessmsgMessage(t *testing.T) {
 	}
 }
 
-func TestProcessMessage(t *testing.T) {
-	var err error
-	// Start a consumer
-	_, ch, err := rabbitmq.NewQueueConsumer(connection, AdpatationReuquestQueueName, AdpatationReuquestExchange, AdpatationReuquestRoutingKey)
-	if err != nil {
-		zlog.Fatal().Err(err).Msg("could not start  AdpatationReuquest consumer ")
-	}
-	defer ch.Close()
+// func TestProcessMessage(t *testing.T) {
+// 	var err error
+// 	// Start a consumer
+// 	_, ch, err := rabbitmq.NewQueueConsumer(connection, AdpatationReuquestQueueName, AdpatationReuquestExchange, AdpatationReuquestRoutingKey)
+// 	if err != nil {
+// 		zlog.Fatal().Err(err).Msg("could not start  AdpatationReuquest consumer ")
+// 	}
+// 	defer ch.Close()
 
-	_, outChannel, err := rabbitmq.NewQueueConsumer(connection, ProcessingOutcomeQueueName, ProcessingOutcomeExchange, ProcessingOutcomeRoutingKey)
-	if err != nil {
-		zlog.Fatal().Err(err).Msg("could not start ProcessingOutcome consumer ")
+// 	_, outChannel, err := rabbitmq.NewQueueConsumer(connection, ProcessingOutcomeQueueName, ProcessingOutcomeExchange, ProcessingOutcomeRoutingKey)
+// 	if err != nil {
+// 		zlog.Fatal().Err(err).Msg("could not start ProcessingOutcome consumer ")
 
-	}
-	defer outChannel.Close()
+// 	}
+// 	defer outChannel.Close()
 
-	minioClient, err = minio.NewMinioClient(minioEndpoint, minioAccessKey, minioSecretKey, false)
+// 	minioClient, err = minio.NewMinioClient(minioEndpoint, minioAccessKey, minioSecretKey, false)
 
-	if err != nil {
-		zlog.Fatal().Err(err).Msg("could not start minio client ")
-	}
+// 	if err != nil {
+// 		zlog.Fatal().Err(err).Msg("could not start minio client ")
+// 	}
 
-	err = createBucketIfNotExist(sourceMinioBucket)
-	if err != nil {
-		zlog.Error().Err(err).Msg(" sourceMinioBucket createBucketIfNotExist error")
-	}
+// 	err = createBucketIfNotExist(sourceMinioBucket)
+// 	if err != nil {
+// 		zlog.Error().Err(err).Msg(" sourceMinioBucket createBucketIfNotExist error")
+// 	}
 
-	err = createBucketIfNotExist(cleanMinioBucket)
-	if err != nil {
-		zlog.Error().Err(err).Msg("cleanMinioBucket createBucketIfNotExist error")
-	}
+// 	err = createBucketIfNotExist(cleanMinioBucket)
+// 	if err != nil {
+// 		zlog.Error().Err(err).Msg("cleanMinioBucket createBucketIfNotExist error")
+// 	}
 
-	headers := make(amqp.Table)
-	headers["file-id"] = "544"
-	headers["source-file-location"] = "../source/file.pdf"
-	headers["rebuilt-file-location"] = "../rebulid"
-	var d amqp.Delivery
-	d.ConsumerTag = "test-tag"
-	d.Headers = headers
-	d.ContentType = "text/plain"
-	d.Body = []byte(body)
-	t.Run("ProcessMessage", func(t *testing.T) {
-		ProcessMessage(d)
+// 	headers := make(amqp.Table)
+// 	headers["file-id"] = "544"
+// 	headers["source-file-location"] = "../source/file.pdf"
+// 	headers["rebuilt-file-location"] = "../rebulid"
+// 	var d amqp.Delivery
+// 	d.ConsumerTag = "test-tag"
+// 	d.Headers = headers
+// 	d.ContentType = "text/plain"
+// 	d.Body = []byte(body)
+// 	t.Run("ProcessMessage", func(t *testing.T) {
+// 		ProcessMessage(d)
 
-	})
-	type testSample struct {
-		data    []byte
-		headers wabbit.Option
-		tag     uint64
-	}
-	sampleTable := []testSample{
-		{
-			data: []byte("teste"),
-			headers: wabbit.Option{
-				"contentType": "binary/fuzz",
-			},
-			tag: uint64(23473824),
-		},
-		{
-			data: []byte("teste"),
-			headers: wabbit.Option{
-				"contentType": "binary/fuzz",
-			},
-			tag: uint64(23473824),
-		},
-	}
+// 	})
+// 	type testSample struct {
+// 		data    []byte
+// 		headers wabbit.Option
+// 		tag     uint64
+// 	}
+// 	sampleTable := []testSample{
+// 		{
+// 			data: []byte("teste"),
+// 			headers: wabbit.Option{
+// 				"contentType": "binary/fuzz",
+// 			},
+// 			tag: uint64(23473824),
+// 		},
+// 		{
+// 			data: []byte("teste"),
+// 			headers: wabbit.Option{
+// 				"contentType": "binary/fuzz",
+// 			},
+// 			tag: uint64(23473824),
+// 		},
+// 	}
 
-	for _, sample := range sampleTable {
-		t.Run("ProcessMessage", func(t *testing.T) {
-			if sample.headers["contentType"].(string) != "binary/fuzz" {
-				t.Errorf("Headers value is nil")
-			}
-		})
-	}
-}
+// 	for _, sample := range sampleTable {
+// 		t.Run("ProcessMessage", func(t *testing.T) {
+// 			if sample.headers["contentType"].(string) != "binary/fuzz" {
+// 				t.Errorf("Headers value is nil")
+// 			}
+// 		})
+// 	}
+// }
