@@ -10,6 +10,7 @@ import (
 	"github.com/k8-proxy/k8-go-comm/pkg/rabbitmq"
 	zlog "github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
+	"github.com/subosito/gotenv"
 
 	miniov7 "github.com/minio/minio-go/v7"
 )
@@ -47,6 +48,10 @@ var (
 	minioClient *miniov7.Client
 	connection  *amqp.Connection
 )
+
+func init() {
+	gotenv.Load()
+}
 
 func main() {
 

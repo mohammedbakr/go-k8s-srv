@@ -8,38 +8,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/minio/minio-go/v7"
+	"github.com/NeowayLabs/wabbit"
+	"github.com/k8-proxy/k8-go-comm/pkg/minio"
+	"github.com/k8-proxy/k8-go-comm/pkg/rabbitmq"
+	min7 "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/suite"
 )
 
-type Rabbitmq struct {
-	// conn    *amqp.Connection
-	// channel *amqp.Channel
-}
-
 type RabbitmqTestSuite struct {
 	suite.Suite
-	// queue *Rabbitmq
 }
 
-// var (
-// 	user     = "docker"
-// 	password = "secret"
-// 	db       = "user"
-// port = "5672"
-
-// 	dialect  = "mysql"
-// 	dsn      = "%s:%s@tcp(localhost:%s)/%s"
-// 	idleConn = 25
-// 	maxConn  = 25
-// )
+var body = "body test"
 
 func (s *RabbitmqTestSuite) TestprocessmsgMessage() {
-	s.T().Run("K8 srv1 massge", func(t *testing.T) {
+	s.T().Run("K8 srv massge", func(t *testing.T) {
 		pool, err := dockertest.NewPool("")
 		if err != nil {
 			log.Fatalf("Could not connect to docker: %s", err)
@@ -63,11 +51,11 @@ func (s *RabbitmqTestSuite) TestprocessmsgMessage() {
 		}
 		time.Sleep(20 * time.Second)
 		// Get a connection //rabbitmq
-		conn, err := amqp.Dial("amqp://localhost:5672")
+		connection, err := amqp.Dial("amqp://localhost:5672")
 		if err != nil {
 			log.Fatalf("%s", err)
 		}
-		defer conn.Close()
+		defer connection.Close()
 		if err := pool.Purge(resource); err != nil {
 			log.Fatalf("Could not purge resource: %s", err)
 		}
@@ -79,6 +67,10 @@ func TestRabbitmqTestSuite(t *testing.T) {
 
 // Minio server
 func TestProcessmsgMessage(t *testing.T) {
+
+	// minioAccessKey = os.Getenv("MINIO_ACCESS_KEY")
+	// minioSecretKey = os.Getenv("MINIO_SECRET_KEY")
+
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		log.Fatalf("Could not connect to docker: %s", err)
@@ -92,6 +84,7 @@ func TestProcessmsgMessage(t *testing.T) {
 			"9000/tcp": {{HostPort: "9000"}},
 		},
 		Env: []string{"MINIO_ACCESS_KEY=MYACCESSKEY", "MINIO_SECRET_KEY=MYSECRETKEY"},
+		// Env: []string{fmt.Sprintf("MINIO_ACCESS_KEY=%s", minioAccessKey), fmt.Sprintf("MINIO_SECRET_KEY=%s", minioSecretKey)},
 	}
 
 	resource, err := pool.RunWithOptions(options)
@@ -100,11 +93,6 @@ func TestProcessmsgMessage(t *testing.T) {
 	}
 
 	endpoint := fmt.Sprintf("localhost:%s", resource.GetPort("9000/tcp"))
-	// or you could use the following, because we mapped the port 9000 to the port 9000 on the host
-	// endpoint := "localhost:9000"
-
-	// exponential backoff-retry, because the application in the container might not be ready to accept connections yet
-	// the minio client does not do service discovery for you (i.e. it does not check if connection can be established), so we have to use the health check
 	if err := pool.Retry(func() error {
 		url := fmt.Sprintf("http://%s/minio/health/live", endpoint)
 		resp, err := http.Get(url)
@@ -121,7 +109,11 @@ func TestProcessmsgMessage(t *testing.T) {
 
 	time.Sleep(20 * time.Second)
 	// now we can instantiate minio client
-	minioClient, err := minio.New(endpoint, &minio.Options{
+	// minioClient, err := min7.New(endpoint, &min7.Options{
+	// 	Creds:  credentials.NewStaticV4(minioAccessKey, minioSecretKey, ""),
+	// 	Secure: false,
+	// })
+	minioClient, err := min7.New(endpoint, &min7.Options{
 		Creds:  credentials.NewStaticV4("MYACCESSKEY", "MYSECRETKEY", ""),
 		Secure: false,
 	})
@@ -129,7 +121,7 @@ func TestProcessmsgMessage(t *testing.T) {
 		log.Println("Failed to create minio client:", err)
 		return
 	}
-	log.Printf("%#v\n", minioClient) // minioClient is now set up
+	// log.Printf("%#v\n", minioClient) // minioClient is now set up
 
 	// now we can use the client, for example, to list the buckets
 	buckets, err := minioClient.ListBuckets(context.Background())
@@ -141,5 +133,81 @@ func TestProcessmsgMessage(t *testing.T) {
 	// When you're done, kill and remove the container
 	if err = pool.Purge(resource); err != nil {
 		log.Fatalf("Could not purge resource: %s", err)
+	}
+}
+
+func TestProcessMessage(t *testing.T) {
+	var err error
+	// Start a consumer
+	_, ch, err := rabbitmq.NewQueueConsumer(connection, AdpatationReuquestQueueName, AdpatationReuquestExchange, AdpatationReuquestRoutingKey)
+	if err != nil {
+		zlog.Fatal().Err(err).Msg("could not start  AdpatationReuquest consumer ")
+	}
+	defer ch.Close()
+
+	_, outChannel, err := rabbitmq.NewQueueConsumer(connection, ProcessingOutcomeQueueName, ProcessingOutcomeExchange, ProcessingOutcomeRoutingKey)
+	if err != nil {
+		zlog.Fatal().Err(err).Msg("could not start ProcessingOutcome consumer ")
+
+	}
+	defer outChannel.Close()
+
+	minioClient, err = minio.NewMinioClient(minioEndpoint, minioAccessKey, minioSecretKey, false)
+
+	if err != nil {
+		zlog.Fatal().Err(err).Msg("could not start minio client ")
+	}
+
+	err = createBucketIfNotExist(sourceMinioBucket)
+	if err != nil {
+		zlog.Error().Err(err).Msg(" sourceMinioBucket createBucketIfNotExist error")
+	}
+
+	err = createBucketIfNotExist(cleanMinioBucket)
+	if err != nil {
+		zlog.Error().Err(err).Msg("cleanMinioBucket createBucketIfNotExist error")
+	}
+
+	headers := make(amqp.Table)
+	headers["file-id"] = "544"
+	headers["source-file-location"] = "../source/file.pdf"
+	headers["rebuilt-file-location"] = "../rebulid"
+	var d amqp.Delivery
+	d.ConsumerTag = "test-tag"
+	d.Headers = headers
+	d.ContentType = "text/plain"
+	d.Body = []byte(body)
+	t.Run("ProcessMessage", func(t *testing.T) {
+		ProcessMessage(d)
+
+	})
+	type testSample struct {
+		data    []byte
+		headers wabbit.Option
+		tag     uint64
+	}
+	sampleTable := []testSample{
+		{
+			data: []byte("teste"),
+			headers: wabbit.Option{
+				"contentType": "binary/fuzz",
+			},
+			tag: uint64(23473824),
+		},
+		{
+			data: []byte("teste"),
+			headers: wabbit.Option{
+				"contentType": "binary/fuzz",
+			},
+			tag: uint64(23473824),
+		},
+	}
+
+	for _, sample := range sampleTable {
+		t.Run("ProcessMessage", func(t *testing.T) {
+			if sample.headers["contentType"].(string) != "binary/fuzz" {
+				t.Errorf("Headers value is nil")
+			}
+		})
 	}
 }
