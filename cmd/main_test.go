@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -64,8 +65,8 @@ func TestRabbitmqTestSuite(t *testing.T) {
 // Minio server
 func TestProcessmsgMessage(t *testing.T) {
 
-	// minioAccessKey = os.Getenv("MINIO_ACCESS_KEY")
-	// minioSecretKey = os.Getenv("MINIO_SECRET_KEY")
+	minioAccessKey = os.Getenv("MINIO_ACCESS_KEY")
+	minioSecretKey = os.Getenv("MINIO_SECRET_KEY")
 
 	pool, err := dockertest.NewPool("")
 	if err != nil {
@@ -79,8 +80,7 @@ func TestProcessmsgMessage(t *testing.T) {
 		PortBindings: map[docker.Port][]docker.PortBinding{
 			"9000/tcp": {{HostPort: "9000"}},
 		},
-		Env: []string{"MINIO_ACCESS_KEY=MYACCESSKEY", "MINIO_SECRET_KEY=MYSECRETKEY"},
-		// Env: []string{fmt.Sprintf("MINIO_ACCESS_KEY=%s", minioAccessKey), fmt.Sprintf("MINIO_SECRET_KEY=%s", minioSecretKey)},
+		Env: []string{fmt.Sprintf("MINIO_ACCESS_KEY=%s", minioAccessKey), fmt.Sprintf("MINIO_SECRET_KEY=%s", minioSecretKey)},
 	}
 
 	resource, err := pool.RunWithOptions(options)
@@ -105,12 +105,8 @@ func TestProcessmsgMessage(t *testing.T) {
 
 	time.Sleep(20 * time.Second)
 	// now we can instantiate minio client
-	// minioClient, err := min7.New(endpoint, &min7.Options{
-	// 	Creds:  credentials.NewStaticV4(minioAccessKey, minioSecretKey, ""),
-	// 	Secure: false,
-	// })
 	minioClient, err := min7.New(endpoint, &min7.Options{
-		Creds:  credentials.NewStaticV4("MYACCESSKEY", "MYSECRETKEY", ""),
+		Creds:  credentials.NewStaticV4(minioAccessKey, minioSecretKey, ""),
 		Secure: false,
 	})
 	if err != nil {
